@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Forecasting</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Stock Forecasting</h1>
+        <form id="stockForm">
+            <label for="stock_symbol">Choose a stock:</label>
+            <select name="stock_symbol" id="stock_symbol">
+                {% for stock in stocks %}
+                <option value="{{ stock }}">{{ stock }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Get Results</button>
+        </form>
+
+        <!-- Results Section -->
+        <div id="results" class="results"></div>
+    </div>
+
+    <!-- JavaScript to Handle the Form Submission and Results Display -->
+    <script>
+        document.getElementById('stockForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Get the selected stock symbol from the form
+            const stockSymbol = document.getElementById('stock_symbol').value;
+
+            // Clear any previous results and show a loading message
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<p>Loading results for <strong>${stockSymbol}</strong>...</p>`;
+
+            // Send a POST request to the /results endpoint with the selected stock symbol
+            fetch('/results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ stock_symbol: stockSymbol }),
+            })
+            .then(response => {
+                // Check if the response is OK (status 200)
+                if (!response.ok) {
+                    throw new Error('Network response was not OK');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Clear the loading message
+                resultsDiv.innerHTML = '';
+
+                // Create the results display for the stock
+                let output = `<h2>Results for <strong>${stockSymbol}</strong></h2>`;
+                output += `<h3>Visualizations:</h3>`;
+
+                // Add the visualization iframe
+                if (data.visualization) {
+                    output += `<iframe src="${data.visualization}" width="600" height="400" style="border:none;"></iframe>`;
+                } else {
+                    output += `<p>No visualizations available.</p>`;
+                }
+
+                // Add forecast model data if available
+                for (const model in data) {
+                    if (model !== 'visualization') {
+                        output += `
+                            <div class="forecast-section">
+                                <h3>${model} Forecast:</h3>
+                                <p><a href="${data[model]}" download>Download ${model} Forecast</a></p>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Display the final results
+                resultsDiv.innerHTML = output;
+            })
+            .catch(error => {
+                // If there's an error (e.g., network issues), show an error message
+                resultsDiv.innerHTML = `<p>Error fetching results: ${error.message}</p>`;
+            });
+        });
+    </script>
+
+    <!-- Inlined CSS for Styling -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        label {
+            margin-right: 10px;
+        }
+        select, button {
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+        .forecast-section {
+            margin: 15px 0;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</body>
+</html>
